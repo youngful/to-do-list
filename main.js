@@ -27,7 +27,7 @@ app.get("/tasks/array", (req, res) => {
             })
             return
         }
-
+        const a = {};
         const taskCounts = {};
 
         tasks.forEach(task => {
