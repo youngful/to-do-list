@@ -1,108 +1,79 @@
-const db = require("./db")
+const Item = require("./db")
 const express = require("express");
+const mongoose = require('mongoose')
 const bodyParser = require("body-parser");
 const app = express();
 const port = 3000;
 
+const dbURL = 'mongodb+srv://list_user:user123@cluster0.f88bnq0.mongodb.net/ToDoList?retryWrites=true&w=majority'
+mongoose.connect(dbURL)
+    .then((result) =>{
+        app.listen(port)
+        console.log("server started")
+    })
+    .catch((e) => console.log(e))
+
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); 
 
+
 app.get("/tasks", (req, res) => {
-    db.all("SELECT * FROM tasks", (err, tasks) => {
-        if(err){
-            res.status(500).json({
-                error: err.message
-            })
-            return
-        }
-        res.json(tasks)
-    })
+    Item.find()
+        .then((result) => {
+            res.send(result)
+        })
+        .catch((e) => {
+            console.log(e)
+        })
 })
-
-app.get("/tasks/array", (req, res) => {
-    db.all("SELECT * FROM tasks", (err, tasks) => {
-        if(err){
-            res.status(500).json({
-                error: err.message
-            })
-            return
-        }
-        const a = {};
-        const taskCounts = {};
-
-        tasks.forEach(task => {
-            const title = task.title;
-            taskCounts[title] = (taskCounts[title] || 0) + 1;
-        });
-
-        res.json(taskCounts)
-    })
-})
-
 
 app.get("/tasks/:id", (req, res) => {
     const taskId = req.params.id;
-    db.all("SELECT * FROM tasks WHERE id = ?", [taskId], (err, task) => {
-        if(err){
-            res.status(500).json({
-                error: err.message
-            })
-            return
-        }
-        if (!task) {
-            res.status(404).json({ error: "Task not found" });
-            return;
-        }
-        res.json(task)
-    })
+    Item.findById(taskId)
+        .then((result) => {
+           res.send(result)
+        })
+        .catch((e) => {
+            console.log(e)
+        })
 })
 
 app.post("/tasks", (req, res) => {
-    const {title, description, completed} = req.body
+    const item = Item(req.body)
 
-    db.run(
-        "INSERT INTO tasks (title, description, completed) VALUES (?, ?, ?)", [title, description, completed], 
-    
-        function(err){{
-            if (err) {
-                res.status(500).json({ error: err.message });
-                return;
-              }
-              res.status(201).json({ id: this.lastID });
-        }}
-    )
+    item.save()
+        .then((result) => {
+            res.redirect("/tasks")
+        })
+        .catch((e) => {
+            console.log(e)
+        })
 })
 
-app.put("/tasks/:id", (req, res) => {
+app.put("tasks/put/:id", (req, res) => {
+    const taskID = req.params.id;
+    const updatedData = req.body; 
+
+    Item.findByIdAndUpdate(taskID, updatedData, { new: true })
+        .exec()
+        .then(updatedItem => {
+            res.redirect(`/tasks/${taskID}`);
+        })
+        .catch((e) => {
+            console.log(e);
+        });
+});
+
+app.delete("/tasks/delete/:id", (req, res) => {
     const taskID = req.params.id
-    const {title, description, completed} = req.body
 
-    db.run(
-        "UPDATE tasks SET title = ?, description = ?, completed = ? WHERE id = ?", [title, description, completed],
-        function(err){{
-            if (err) {
-                res.status(500).json({ error: err.message });
-                return;
-              }
-              res.status(201).json({ message: `Task updated successfully with id:${taskID}` });
-        }}
-    )
+    Item.findByIdAndDelete(taskID)
+        .exec()
+        .then((result) => {
+            res.redirect(`/tasks`);
+        })
+        .catch((e) => {
+            console.log(e);
+        });
 })
-
-app.delete("/tasks/:id", (req, res) => {
-    const taskID = req.params.id
-    
-    db.run(
-        "DELETE FROM tasks WHERE id = ?", [taskID], (err) =>{
-            if (err) {
-                res.status(500).json({ error: err.message });
-                return;
-              }
-              res.json({ message: `Task deleted successfully with id:${taskID}` });
-        }
-    )
-})
-
-app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
-}); 
