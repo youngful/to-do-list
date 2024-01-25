@@ -1,17 +1,17 @@
-const sqlBase = require('sqlite3').verbose()
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
 
-const db = new sqlBase.Database(':memory:')
+const item = new Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: String,
+  compleated: {
+    type: Boolean,
+    required: true
+  }
+}, {timestamps: true})
 
-
-db.serialize(() => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        description TEXT,
-        completed BOOLEAN
-      )
-    `);
-  });
-
-module.exports = db;
+const Item = mongoose.model("Item", item)
+module.exports = Item
